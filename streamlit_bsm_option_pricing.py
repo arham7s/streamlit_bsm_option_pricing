@@ -7,8 +7,6 @@ Original file is located at
     https://colab.research.google.com/drive/1erw8dQcFfGy7Eyww8d4qWuFtsFfxQAbY
 """
 
-# 📌 Install required libraries
-!pip install numpy matplotlib scipy --quiet
 
 # 📌 Import libraries
 import numpy as np
