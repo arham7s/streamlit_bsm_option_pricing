@@ -1,87 +1,101 @@
 import streamlit as st
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.stats import norm
+import plotly.graph_objects as go
 
-# 🌐 Streamlit Page Settings
-st.set_page_config(page_title="Options Pricing Tool", layout="centered")
+# 🌐 Page setup
+st.set_page_config(page_title="BSM Option Tool", layout="centered")
 
-# 🌑 Dark Theme Custom Styling
+# 🌑 Dark theme styling
 st.markdown("""
     <style>
-        body {
-            background-color: #0e1117;
-            color: #ffffff;
-        }
-        .stApp {
-            background-color: #0e1117;
-        }
-        h1, h4 {
-            color: #61dafb;
-            text-align: center;
-        }
-        .stSlider > div {
-            color: #ffffff;
-        }
-        .css-1cpxqw2 {
-            background-color: #262730;
-        }
+        .stApp { background-color: #0e1117; color: white; }
+        h1, h3 { text-align: center; color: #61dafb; }
     </style>
 """, unsafe_allow_html=True)
 
-# 🧭 App Title
-st.markdown("<h1>💹 Option Pricing Dashboard</h1>", unsafe_allow_html=True)
-st.markdown("<h4>Designed by Arham Shah</h4>", unsafe_allow_html=True)
+st.markdown("<h1>💹 Black-Scholes Option Dashboard</h1>", unsafe_allow_html=True)
+st.markdown("<h3>By Arham Shah</h3>", unsafe_allow_html=True)
 
-# 🧮 Sidebar Inputs - Interactive Sliders
-with st.sidebar:
-    st.markdown("## 🎯 Input Parameters")
+# -------------------
+# 🧮 Inputs
+# -------------------
+st.sidebar.header("🔧 Input Parameters")
 
-    st.slider("📌 Spot Price (S)", min_value=50.0, max_value=200.0, value=100.0, step=1.0, key="spot")
-    st.slider("🎯 Strike Price (K)", min_value=50.0, max_value=200.0, value=100.0, step=1.0, key="strike")
-    st.slider("⏳ Time to Expiry (Years)", min_value=0.01, max_value=3.0, value=1.0, step=0.01, key="expiry")
-    st.slider("🏦 Risk-free Interest Rate (r)", min_value=0.0, max_value=0.2, value=0.05, step=0.005, key="rate")
-    st.slider("📈 Volatility (σ)", min_value=0.01, max_value=1.0, value=0.2, step=0.01, key="vol")
-    
-    option_type = st.radio("📑 Option Type", ["Call", "Put"], horizontal=True)
+S = st.sidebar.slider("📌 Spot Price (S)", 50.0, 1000.0, 350.0, step=10.0)
+K = st.sidebar.slider("🎯 Strike Price (K)", 50.0, 1000.0, 280.0, step=10.0)
+T = st.sidebar.slider("⏳ Time to Expiry (T in Years)", 0.1, 10.0, 2.5, step=0.1)  # ✅ Dynamic T
+r = st.sidebar.slider("🏦 Risk-Free Rate (r)", 0.00, 0.20, 0.10, step=0.01)
+sigma = st.sidebar.slider("📈 Volatility (σ)", 0.10, 1.50, 0.75, step=0.01)
+option_type = st.sidebar.radio("📑 Option Type", ["Call", "Put"], horizontal=True)
 
-# Assign variables from sidebar
-S = st.session_state.spot
-K = st.session_state.strike
-T = st.session_state.expiry
-r = st.session_state.rate
-sigma = st.session_state.vol
-
-# 🧠 Black-Scholes Formula
+# -------------------
+# 📈 Black-Scholes Model
+# -------------------
 d1 = (np.log(S / K) + (r + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
 d2 = d1 - sigma * np.sqrt(T)
 
-if option_type.lower() == "call":
+if option_type == "Call":
     price = S * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
 else:
     price = K * np.exp(-r * T) * norm.cdf(-d2) - S * norm.cdf(-d1)
 
-# 💰 Display Premium
+# Greeks
+delta = norm.cdf(d1) if option_type == "Call" else -norm.cdf(-d1)
+gamma = norm.pdf(d1) / (S * sigma * np.sqrt(T))
+theta = (-S * norm.pdf(d1) * sigma / (2 * np.sqrt(T)) -
+         r * K * np.exp(-r * T) * norm.cdf(d2 if option_type == 'Call' else -d2))
+vega = S * norm.pdf(d1) * np.sqrt(T)
+rho = K * T * np.exp(-r * T) * (norm.cdf(d2) if option_type == "Call" else -norm.cdf(-d2))
+
+# -------------------
+# 🧾 Output Results
+# -------------------
 st.markdown("### 💰 Option Price")
 st.success(f"**{option_type} Option Premium: ₹{price:.2f}**")
 
-# 📉 Payoff Diagram
-spot_prices = np.linspace(S * 0.5, S * 1.5, 100)
-if option_type.lower() == 'call':
-    payoff = np.maximum(spot_prices - K, 0) - price
-else:
-    payoff = np.maximum(K - spot_prices, 0) - price
+st.markdown("### 📊 Greeks")
+st.markdown(f"""
+- **Delta**: {delta:.4f}  
+- **Gamma**: {gamma:.8f}  
+- **Theta**: {theta:.4f}  
+- **Vega**: {vega / 100:.4f} per 1%  
+- **Rho**: {rho / 100:.4f} per 1%  
+""")
 
-fig, ax = plt.subplots(figsize=(8, 4))
-ax.plot(spot_prices, payoff, label='Payoff', linewidth=2, color='cyan')
-ax.axhline(0, color='white', linestyle='--', linewidth=1)
-ax.axvline(S, color='orange', linestyle=':', label='Current Price')
-ax.set_facecolor('#1e1e1e')
-ax.tick_params(colors='white')
-ax.set_title(f'{option_type} Option Payoff at Expiry', color='white')
-ax.set_xlabel('Stock Price at Expiry', color='white')
-ax.set_ylabel('Profit / Loss', color='white')
-ax.legend()
-ax.grid(True, color='gray')
-st.pyplot(fig)
+# -------------------
+# 🌐 3D Surface Plot (Call Only)
+# -------------------
+st.markdown("### 🌐 3D Option Price Surface (Volatility vs Time)")
+
+vol_range = np.linspace(0.1, 1.5, 50)
+time_range = np.linspace(0.1, 10.0, 50)
+vol_grid, time_grid = np.meshgrid(vol_range, time_range)
+
+def bsm_call_price(S, K, T, r, sigma):
+    d1 = (np.log(S / K) + (r + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
+    d2 = d1 - sigma * np.sqrt(T)
+    return S * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
+
+price_surface = bsm_call_price(S, K, time_grid, r, vol_grid)
+
+fig = go.Figure(data=[go.Surface(z=price_surface, x=vol_grid, y=time_grid, colorscale='Viridis')])
+fig.update_layout(
+    scene=dict(
+        xaxis_title='Volatility (σ)',
+        yaxis_title='Time to Expiry (T)',
+        zaxis_title='Call Option Price'
+    ),
+    margin=dict(l=0, r=0, b=0, t=30),
+    title=f'Call Option Price Surface (S={S}, K={K})'
+)
+
+st.plotly_chart(fig, use_container_width=True)
+
+# -------------------
+# 📎 Footer
+# -------------------
+st.markdown("---")
+st.markdown("<p style='text-align:center;color:gray;'>Made with ❤️ by Arham Shah • Powered by <a style='color:#1f77b4;' href='https://streamlit.io'>Streamlit</a></p>", unsafe_allow_html=True)
+
 
