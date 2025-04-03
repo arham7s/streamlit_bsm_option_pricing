@@ -15,7 +15,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown("<h1>💹 Black-Scholes Option Dashboard</h1>", unsafe_allow_html=True)
-st.markdown("<h3>By Arham Shah</h3>", unsafe_allow_html=True)
 
 # -------------------
 # 🧮 Inputs
@@ -96,6 +95,6 @@ st.plotly_chart(fig, use_container_width=True)
 # 📎 Footer
 # -------------------
 st.markdown("---")
-st.markdown("<p style='text-align:center;color:gray;'>Made with ❤️ by Arham Shah • Powered by <a style='color:#1f77b4;' href='https://streamlit.io'>Streamlit</a></p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;color:gray;'>Made by Arham Shah • Powered by <a style='color:#1f77b4;' href='https://streamlit.io'>Streamlit</a></p>", unsafe_allow_html=True)
 
 
